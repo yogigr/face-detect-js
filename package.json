@@ -1,0 +1,33 @@
+{
+  "name": "@yogigr/face-detect-js",
+  "version": "1.0.0",
+  "description": "Package JavaScript untuk deteksi wajah menggunakan face-api.js.",
+  "type": "module",
+  "main": "dist/face-detect-js.bundle.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "start": "node test.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "dependencies": {
+    "canvas": "^3.1.0",
+    "face-api.js": "^0.22.2"
+  },
+  "devDependencies": {
+    "assert": "^2.1.0",
+    "browserify-zlib": "^0.2.0",
+    "crypto-browserify": "^3.12.1",
+    "html-loader": "^4.2.0",
+    "https-browserify": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "url": "^0.11.4",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^5.1.4"
+  }
+}
