@@ -1,5 +1,5 @@
 // test.js
-import { loadModelsLazy, detectFace, validateImage } from './src/index.js'; // Pastikan path ini benar sesuai struktur proyek
+import { loadModelsLazy, detectFace, validateImage, faceapi } from './src/index.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -9,17 +9,15 @@ const __dirname = path.dirname(__filename);
 
 async function test() {
   try {
-    console.time('Test Execution Time'); // Mulai timer untuk seluruh pengujian
+    console.time('Test Execution Time');
 
-    // Pastikan folder 'models' dan 'test-image.jpg' berada di lokasi yang sama
-    // dengan file test.js, atau sesuaikan path-nya.
     const modelPath = path.resolve(__dirname, './models');
     console.log('Model Path:', modelPath);
 
     // --- Memuat Model Secara Lazy ---
-    console.time('Model Loading Time'); // Mulai timer untuk loading model
+    console.time('Model Loading Time');
     await loadModelsLazy(modelPath);
-    console.timeEnd('Model Loading Time'); // Akhiri timer dan cetak waktu
+    console.timeEnd('Model Loading Time');
     console.log('Models loaded successfully.');
 
     // --- Path Gambar untuk Pengujian ---
@@ -27,30 +25,41 @@ async function test() {
     console.log('Image Path:', imagePath);
 
     // --- Validasi Gambar ---
-    // Fungsi validateImage di src/utils.js menggunakan loadImage dari 'canvas'.
-    // Ini akan bekerja karena Anda berada di lingkungan Node.js dan 'canvas' diinstal.
-    console.time('Image Validation Time'); // Mulai timer untuk validasi gambar
-    await validateImage(imagePath); // Tambahkan 'await' karena validateImage adalah async
-    console.timeEnd('Image Validation Time'); // Akhiri timer dan cetak waktu
+    console.time('Image Validation Time');
+    await validateImage(imagePath);
+    console.timeEnd('Image Validation Time');
     console.log('Image validated successfully.');
 
     // --- Deteksi Wajah ---
-    // Fungsi detectFace di src/faceDetection.js juga menggunakan loadImage dari 'canvas'.
-    console.time('Face Detection Time'); // Mulai timer untuk deteksi wajah
-    const descriptor = await detectFace(imagePath);
-    console.timeEnd('Face Detection Time'); // Akhiri timer dan cetak waktu
+    console.time('Face Detection Time');
+    // `detections` sekarang adalah array dari objek hasil deteksi,
+    // di mana setiap objek memiliki properti `descriptor`.
+    const detections = await detectFace(imagePath);
+    console.timeEnd('Face Detection Time');
 
-    console.log('Face detected. Descriptor:');
-    // Untuk descriptor, yang merupakan Float32Array, sebaiknya jangan dicetak seluruhnya
-    // karena bisa sangat panjang. Cetak sebagian atau informasi singkat.
-    console.log(descriptor.slice(0, 10), '...'); // Cetak 10 elemen pertama
-    console.log('Descriptor length:', descriptor.length);
+    if (detections.length > 0) {
+      console.log(`Wajah terdeteksi: ${detections.length}`);
 
-    console.timeEnd('Test Execution Time'); // Akhiri timer untuk seluruh pengujian
+      // Iterasi setiap deteksi untuk mendapatkan descriptor
+      detections.forEach((detection, index) => {
+        const descriptor = detection.descriptor; // Ini adalah descriptor yang Anda cari!
+
+        console.log(`Descriptor untuk wajah ke-${index + 1}:`);
+        // Cetak 10 elemen pertama dan panjang descriptor untuk verifikasi
+        console.log(descriptor.slice(0, 10), '...');
+        console.log('Panjang Descriptor:', descriptor.length);
+
+        // Jika Anda ingin melihat seluruh descriptor (hati-hati, bisa sangat panjang!)
+        // console.log('Full Descriptor:', descriptor); 
+      });
+    } else {
+      console.log('Tidak ada wajah terdeteksi.');
+    }
+
+    console.timeEnd('Test Execution Time');
   } catch (error) {
-    console.error('Test Error:', error.message);
-    // Jika ada error, Anda mungkin ingin mencetak stack trace untuk debugging lebih lanjut
-    // console.error(error);
+    console.error('Terjadi Error:', error.message);
+    console.error(error); // Cetak stack trace penuh untuk debugging
   }
 }
 

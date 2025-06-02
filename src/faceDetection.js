@@ -1,16 +1,9 @@
 // src/faceDetection.js
 
-// Conditional imports for Node.js specific modules
-let createCanvas, loadImage, createImageData;
-if (typeof window === 'undefined') { // Check if running in Node.js
-  // Hanya import 'canvas' jika di Node.js
-  const canvasModule = await import('canvas');
-  createCanvas = canvasModule.createCanvas;
-  loadImage = canvasModule.loadImage;
-  createImageData = canvasModule.createImageData;
-}
+// Jangan lakukan conditional import di top level seperti ini, ini sudah diperbaiki di respons sebelumnya.
+// const createCanvas, loadImage, createImageData; akan diimpor di dalam fungsi.
 
-let faceapiModule = null;
+let faceapiModule = null; // Ini akan menyimpan objek face-api.js
 let modelsLoaded = false;
 
 /**
@@ -26,11 +19,13 @@ export async function loadModelsLazy(modelPath) {
     // Monkey patching hanya jika di Node.js
     if (typeof window === 'undefined') {
       try {
+        const { createCanvas, loadImage, ImageData } = await import('canvas'); // Import di sini
+        
         const dummyCanvas = createCanvas(1, 1);
         faceapiModule.env.monkeyPatch({
           Canvas: dummyCanvas.constructor,
           Image: loadImage,
-          ImageData: createImageData,
+          ImageData: ImageData,
         });
         console.log('[faceDetection.js]: face-api.js monkey-patched for Node.js environment.');
       } catch (e) {
@@ -49,7 +44,6 @@ export async function loadModelsLazy(modelPath) {
       console.log('[faceDetection.js]: Models loaded from disk (Node.js).');
     } else {
       // Browser: load from URI
-      // Pastikan modelPath adalah URL yang dapat diakses (misalnya, '/models' jika di-host di server yang sama)
       await faceapiModule.nets.ssdMobilenetv1.loadFromUri(modelPath);
       await faceapiModule.nets.faceLandmark68Net.loadFromUri(modelPath);
       await faceapiModule.nets.faceRecognitionNet.loadFromUri(modelPath);
@@ -74,7 +68,8 @@ export async function detectFace(input) {
   let tensor; // Hanya digunakan di Node.js
 
   if (typeof window === 'undefined') {
-    // Node.js environment: input is imagePath string
+    const { loadImage, createCanvas } = await import('canvas'); 
+
     const uploadedImage = await loadImage(input);
     const canvasObj = createCanvas(uploadedImage.width, uploadedImage.height);
     const ctx = canvasObj.getContext('2d');
@@ -82,12 +77,10 @@ export async function detectFace(input) {
     tensor = faceapiModule.tf.browser.fromPixels(canvasObj);
     mediaElement = canvasObj; // Gunakan canvas untuk deteksi di Node.js
   } else {
-    // Browser environment: input is HTMLImageElement, HTMLCanvasElement, or HTMLVideoElement
     if (!(input instanceof HTMLImageElement || input instanceof HTMLCanvasElement || input instanceof HTMLVideoElement)) {
       throw new Error('Di lingkungan browser, detectFace mengharapkan HTMLImageElement, HTMLCanvasElement, atau HTMLVideoElement.');
     }
     mediaElement = input;
-    // face-api.js dapat langsung mengambil elemen media HTML, ia akan membuat tensor secara internal
   }
 
   const detections = await faceapiModule
@@ -95,10 +88,16 @@ export async function detectFace(input) {
     .withFaceLandmarks()
     .withFaceDescriptors();
 
-  // Buang tensor hanya jika dibuat secara manual (di Node.js)
   if (tensor) {
     tensor.dispose();
   }
 
-  return detections; // Mengembalikan seluruh array deteksi
+  return detections;
 }
+
+// --- PENTING ---
+// Mengekspor faceapiModule sebagai 'faceapi'
+// Ini akan memungkinkan src/index.js untuk mengimpornya dengan nama 'faceapi'
+// dan kemudian re-export ke konsumen library Anda.
+// Perlu diingat, 'faceapi' akan bernilai null sampai loadModelsLazy dipanggil.
+export { faceapiModule as faceapi };
